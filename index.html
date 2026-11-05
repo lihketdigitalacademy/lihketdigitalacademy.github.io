@@ -433,9 +433,41 @@
             </button>
           </div>
         </div>
-        <div>
-          <label for="adminEditSubtitleInput" class="block text-xs font-semibold text-slate-300 mb-1">Course Subtitle / Summary (በአማርኛ)</label>
-          <input id="adminEditSubtitleInput" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200" />
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div class="md:col-span-3">
+            <label for="adminEditCategorySelect" class="block text-xs font-semibold text-slate-300 mb-1">Category (ዘርፍ)</label>
+            <select id="adminEditCategorySelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white">
+              <option value="WEB">Web & Software Engineering</option>
+              <option value="MARKETING">Digital Marketing & Growth</option>
+              <option value="AI">AI & Business Automation</option>
+            </select>
+          </div>
+          <div class="md:col-span-9">
+            <label for="adminEditSubtitleInput" class="block text-xs font-semibold text-slate-300 mb-1">Course Subtitle / Summary (በአማርኛ)</label>
+            <input id="adminEditSubtitleInput" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200" />
+          </div>
+        </div>
+
+        <!-- Custom Course Code (HTML or JSON Chapters) Importer -->
+        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label for="adminEditCustomCodeInput" class="block text-xs font-bold text-indigo-300">
+              📦 የኮርሱ ሙሉ ትምህርት ኮድ ማስገቢያ (Paste Custom Course HTML or JSON Code):
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="adminCopyTemplateBtn" type="button" class="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-[11px] font-semibold">
+                📋 የኮርስ ኮድ አብነት ቅዳ (Copy Code Template)
+              </button>
+              <label for="adminUploadCourseFileInput" class="cursor-pointer px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
+                📂 ከፋይል ጫን (Upload .html / .json)
+              </label>
+              <input id="adminUploadCourseFileInput" type="file" accept=".html,.htm,.json,.txt" class="hidden" />
+            </div>
+          </div>
+          <textarea id="adminEditCustomCodeInput" rows="5" placeholder="በኮድ ያዘጋጁትን የኮርስ HTML (ከነ ምዕራፎቹ፣ ሠንጠረዦቹና SVG ምስሎቹ) ወይም JSON እዚህ ይለጥፉና Save Course ይበሉ..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-500"></textarea>
+          <p class="text-[11px] text-slate-400">
+            💡 ምክር፡ 10 አዳዲስ ኮርሶችን ሲያዘጋጁ፣ እያንዳንዱን ኮርስ ከላይ <strong>"+ Add Brand New Course..."</strong> እያሉ መርጠው፣ ርዕሱንና ዋጋውን ጽፈው፣ የኮርሱን ኮድ እዚህ ሳጥን ውስጥ ለጥፈው <strong>Save Course</strong> ሲሉ ወዲያውኑ ወደ Firebase ተልኮ ከነባሮቹ ኮርሶች ጎን በራሱ ይደረደራል!
+          </p>
         </div>
       </div>
 
@@ -1557,7 +1589,11 @@
               const target = COURSES[existingIdx];
               if (cData.title) target.title = cData.title;
               if (cData.subtitle) target.subtitle = cData.subtitle;
+              if (cData.category) target.category = cData.category;
               if (cData.price !== undefined) target.price = Number(cData.price);
+              if (cData.customCode !== undefined) target.customCode = cData.customCode;
+              if (Array.isArray(cData.chapters) && cData.chapters.length > 0) target.chapters = cData.chapters;
+              if (Array.isArray(cData.modules) && cData.modules.length > 0) target.modules = cData.modules;
             } else if (cData.title && cData.price !== undefined) {
               COURSES.push({
                 id: docSnap.id,
@@ -1569,12 +1605,13 @@
                 students: 12,
                 rating: "5.0",
                 badge: "New Course",
+                customCode: cData.customCode || "",
                 modules: cData.modules || [
                   "ምዕራፍ 1፡ መሰረታዊ መርሆዎች እና የስራ ንድፍ",
                   "ምዕራፍ 2፡ የተግባር ልምምድ እና ፕሮጀክት ግንባታ",
                   "ምዕራፍ 3፡ ወደ ገበያ ማውጣት እና ውጤት ማስመዝገብ"
                 ],
-                chapters: COURSES[0].chapters
+                chapters: (Array.isArray(cData.chapters) && cData.chapters.length > 0) ? cData.chapters : COURSES[0].chapters
               });
             }
           });
@@ -1839,7 +1876,10 @@
       });
 
       const bodyEl = document.getElementById("playerRichLessonBody");
-      bodyEl.innerHTML = `
+      if (course.customCode && course.customCode.trim().startsWith("<")) {
+        bodyEl.innerHTML = `<div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-4">${course.customCode}</div>`;
+      } else {
+        bodyEl.innerHTML = `
         <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-3">
           <h5 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Chapter Overview</h5>
           <p class="text-slate-200 leading-relaxed">${activeChapter.intro}</p>
@@ -1938,6 +1978,7 @@
         </div>
       `;
 
+      }
       const prevBtn = document.getElementById("prevLessonPageBtn");
       const nextBtn = document.getElementById("nextLessonPageBtn");
       prevBtn.disabled = state.activeChapterIdx <= 0;
@@ -2271,6 +2312,8 @@
       const editTitle = document.getElementById("adminEditTitleInput");
       const editSubtitle = document.getElementById("adminEditSubtitleInput");
       const editPrice = document.getElementById("adminEditPriceInput");
+      const editCategory = document.getElementById("adminEditCategorySelect");
+      const editCustomCode = document.getElementById("adminEditCustomCodeInput");
 
       const populateCourseEditor = () => {
         if (!editSelect) return;
@@ -2278,7 +2321,9 @@
         editSelect.innerHTML =
           COURSES.map((c) => `<option value="${c.id}">${c.title} (${c.price} ETB)</option>`).join("") +
           `<option value="NEW_COURSE">+ Add Brand New Course...</option>`;
-        editSelect.value = COURSES.some((c) => c.id === currentVal) ? currentVal : (COURSES[0]?.id || "NEW_COURSE");
+        editSelect.value = (currentVal === "NEW_COURSE" || COURSES.some((c) => c.id === currentVal))
+          ? currentVal
+          : (COURSES[0]?.id || "NEW_COURSE");
         updateEditorInputs();
       };
 
@@ -2287,12 +2332,16 @@
           editTitle.value = "";
           editSubtitle.value = "";
           editPrice.value = 1500;
+          if (editCategory) editCategory.value = "WEB";
+          if (editCustomCode) editCustomCode.value = "";
         } else {
           const sel = COURSES.find((c) => c.id === editSelect.value) || COURSES[0];
           if (sel) {
             editTitle.value = sel.title;
             editSubtitle.value = sel.subtitle || "";
             editPrice.value = sel.price;
+            if (editCategory) editCategory.value = sel.category || "WEB";
+            if (editCustomCode) editCustomCode.value = sel.customCode || "";
           }
         }
       };
@@ -2300,13 +2349,87 @@
       populateCourseEditor();
       editSelect.addEventListener("change", updateEditorInputs);
 
+      // Copy Course Code Template Button
+      document.getElementById("adminCopyTemplateBtn").addEventListener("click", () => {
+        const sampleTemplate = JSON.stringify({
+          modules: [
+            "ምዕራፍ 1፡ የኮርሱ መግቢያ እና መሰረታዊ ንድፍ",
+            "ምዕራፍ 2፡ የተግባር ልምምድ እና ፕሮጀክት"
+          ],
+          chapters: [
+            {
+              title: "ምዕራፍ 1፡ የኮርሱ መግቢያ እና መሰረታዊ ንድፍ",
+              subtopics: ["1.1 ዋና ዓላማ", "1.2 የተግባር ቅደም ተከተል"],
+              intro: "እዚህ ጋር የምዕራፉን ሰፊ የአማርኛ ማብራሪያ ይጽፋሉ።",
+              svgType: "ARCHITECTURE",
+              steps: [
+                { step: "ደረጃ 1", title: "መሰረታዊ ዝግጅት", desc: "የመጀመሪያውን ደረጃ ማብራሪያ እዚህ ይጻፉ።" }
+              ],
+              tableTitle: "የንጽጽር ሠንጠረዥ",
+              tableHeaders: ["መስፈርት", "ውጤት"],
+              tableRows: [["ጥራት", "100%"]],
+              chartTitle: "የውጤት መለኪያ",
+              chartBars: [{ label: "ተግባራዊነት", pct: 95, color: "bg-emerald-500" }],
+              roadmap: ["ደረጃ 1", "ደረጃ 2"],
+              pros: ["ጠቀሜታ 1"],
+              cons: ["ጥንቃቄ 1"]
+            }
+          ]
+        }, null, 2);
+        if (editCustomCode) editCustomCode.value = sampleTemplate;
+        try { navigator.clipboard.writeText(sampleTemplate); } catch (e) {}
+        showToast("የኮርስ ኮድ አብነት (Template) በሳጥኑ ውስጥ ተሞልቷል!", "success");
+      });
+
+      // Upload .html or .json Course File directly from Phone/Tablet
+      document.getElementById("adminUploadCourseFileInput").addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const content = String(ev.target.result || "");
+          if (editCustomCode) editCustomCode.value = content;
+          if (!editTitle.value.trim()) {
+            editTitle.value = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
+          }
+          showToast(`Loaded course file: ${file.name}`, "success");
+        };
+        reader.readAsText(file);
+      });
+
       document.getElementById("adminSaveCourseBtn").addEventListener("click", async () => {
         const titleVal = editTitle.value.trim();
         const subVal = editSubtitle.value.trim() || "ፕሪሚየም የዲጂታል ክህሎት ኮርስ";
         const priceVal = Math.max(0.01, parseFloat(editPrice.value) || 1);
+        const catVal = editCategory ? editCategory.value : "WEB";
+        const rawCode = editCustomCode ? editCustomCode.value.trim() : "";
+
         if (!titleVal) {
           showToast("Please enter a course title", "warning");
           return;
+        }
+
+        let parsedChapters = null;
+        let parsedModules = null;
+        let customHtml = "";
+
+        if (rawCode) {
+          if (rawCode.startsWith("{") || rawCode.startsWith("[")) {
+            try {
+              const obj = JSON.parse(rawCode);
+              if (Array.isArray(obj)) parsedChapters = obj;
+              else if (obj.chapters) {
+                parsedChapters = obj.chapters;
+                parsedModules = obj.modules || obj.chapters.map((ch) => ch.title);
+              }
+            } catch (err) {
+              showToast("Invalid JSON format in Course Code box", "error");
+              return;
+            }
+          } else {
+            // Treat as rich HTML course content
+            customHtml = rawCode;
+          }
         }
 
         let targetId = editSelect.value;
@@ -2314,7 +2437,7 @@
           targetId = "course_" + Date.now();
           COURSES.push({
             id: targetId,
-            category: "WEB",
+            category: catVal,
             title: titleVal,
             subtitle: subVal,
             price: priceVal,
@@ -2322,12 +2445,13 @@
             students: 1,
             rating: "5.0",
             badge: "New",
-            modules: [
+            customCode: customHtml || rawCode,
+            modules: parsedModules || [
               "ምዕራፍ 1፡ መሰረታዊ መርሆዎች እና የስራ ንድፍ",
               "ምዕራፍ 2፡ የተግባር ልምምድ እና ፕሮጀክት ግንባታ",
               "ምዕራፍ 3፡ ወደ ገበያ ማውጣት እና ውጤት ማስመዝገብ"
             ],
-            chapters: COURSES[0].chapters
+            chapters: parsedChapters || COURSES[0].chapters
           });
         } else {
           const selCourse = COURSES.find((c) => c.id === targetId);
@@ -2335,31 +2459,40 @@
             selCourse.title = titleVal;
             selCourse.subtitle = subVal;
             selCourse.price = priceVal;
+            selCourse.category = catVal;
+            if (rawCode) selCourse.customCode = customHtml || rawCode;
+            if (parsedChapters) selCourse.chapters = parsedChapters;
+            if (parsedModules) selCourse.modules = parsedModules;
           }
         }
 
         try {
           const overrides = JSON.parse(localStorage.getItem("lihket_courses_v1") || "{}");
-          overrides[targetId] = { title: titleVal, subtitle: subVal, price: priceVal };
+          overrides[targetId] = { title: titleVal, subtitle: subVal, price: priceVal, category: catVal, customCode: customHtml || rawCode };
           localStorage.setItem("lihket_courses_v1", JSON.stringify(overrides));
         } catch (e) {}
 
         if (state.db) {
           try {
-            await setDoc(doc(state.db, "courses_catalog", targetId), {
+            const payload = {
               title: titleVal,
               subtitle: subVal,
               price: priceVal,
+              category: catVal,
+              customCode: customHtml || rawCode,
               deleted: false,
               updatedAt: serverTimestamp()
-            });
+            };
+            if (parsedChapters) payload.chapters = parsedChapters;
+            if (parsedModules) payload.modules = parsedModules;
+            await setDoc(doc(state.db, "courses_catalog", targetId), payload);
           } catch (e) {}
         }
 
         editSelect.value = targetId;
         populateCourseEditor();
         renderAllViews();
-        showToast(`Saved "${titleVal}" (${priceVal} ETB)`, "success");
+        showToast(`Saved "${titleVal}" (${priceVal} ETB) to Firebase!`, "success");
       });
 
       document.getElementById("adminDeleteCourseBtn").addEventListener("click", async () => {
